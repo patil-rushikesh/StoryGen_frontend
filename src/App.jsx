@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import "./App.css";
 import "./../public/horror.mp4";
 
@@ -8,28 +9,132 @@ function App() {
   const [storyType, setStoryType] = useState("");
   const [storyCreativity, setStoryCreativity] = useState("");
   const [ageGroup, setAgeGroup] = useState("");
+  const [plotOptions, setPlotOptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const generateStory = () => {
-    console.log("Filters Selected:", { storyType, storyCreativity, ageGroup });
-    setStoryText(
-      `Once upon a time... \n${prompt} \nWhat happens next? Choose an option below.`
-    );
+  const generateStory = async () => {
+    setIsLoading(true);
+    setError("");
+    const payload = {
+      storyType,
+      storyCreativity,
+      ageGroup,
+      storyStart: prompt,
+    };
+    console.log("Sending request to backend with payload:", payload);
+
+    try {
+      // Test the health check endpoint first
+      const healthResponse = await axios.get("http://localhost:3000/health");
+      console.log("Health check response:", healthResponse.data);
+
+      // Proceed with the story generation request
+      const response = await axios.post("http://localhost:3000/story/initiate", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log("Backend response:", response.data);
+      const { plotOptions } = response.data;
+      setPlotOptions(plotOptions);
+      setStoryText("");
+    } catch (error) {
+      console.error("Error generating story:", error);
+      if (error.response) {
+        console.log("Response status:", error.response.status);
+        console.log("Response data:", error.response.data);
+        setError(`Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+        setError("No response from backend. Is the backend running on port 3000?");
+      } else {
+        console.log("Request setup error:", error.message);
+        setError(`Request error: ${error.message}`);
+      }
+      setStoryText("Failed to generate story. Check the console for details.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Placeholder function for the "What Next" options
-  const handleNextOption = (option) => {
-    console.log("Next option selected:", option);
-    // Add logic here to dynamically update storyText based on the option
-    setStoryText((prev) => `${prev} \n${option} was chosen, and the story continues...`);
+  const handlePlotOptionSelect = async (selectedPlot) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const updatedStory = storyText ? `${storyText}\n${selectedPlot}` : selectedPlot;
+      setStoryText(updatedStory);
+
+      console.log("Continuing story with:", { completedStory: updatedStory });
+      const response = await axios.post("http://localhost:3000/story/continue", {
+        completedStory: updatedStory,
+        storyType,
+        storyCreativity,
+        ageGroup,
+      });
+      console.log("Continue response:", response.data);
+      const { nextPlotOptions } = response.data;
+      setPlotOptions(nextPlotOptions);
+    } catch (error) {
+      console.error("Error continuing story:", error);
+      if (error.response) {
+        setError(`Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        setError("No response from backend. Is the backend running on port 3000?");
+      } else {
+        setError(`Request error: ${error.message}`);
+      }
+      setStoryText(`${storyText}\nFailed to continue story. Check the console for details.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const reloadPlots = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      console.log("Reloading plots with:", {
+        completedStory: storyText || undefined,
+        storyType,
+        storyCreativity,
+        ageGroup,
+        storyStart: storyText ? undefined : prompt,
+      });
+      const response = await axios.post("http://localhost:3000/api/story/reload", {
+        completedStory: storyText || undefined,
+        storyType,
+        storyCreativity,
+        ageGroup,
+        storyStart: storyText ? undefined : prompt,
+      });
+      console.log("Reload response:", response.data);
+      const { plotOptions } = response.data;
+      setPlotOptions(plotOptions);
+    } catch (error) {
+      console.error("Error reloading plots:", error);
+      if (error.response) {
+        setError(`Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        setError("No response from backend. Is the backend running on port 3000?");
+      } else {
+        setError(`Request error: ${error.message}`);
+      }
+      setStoryText(`${storyText}\nFailed to reload plots. Check the console for details.`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <>
       <div className="flex h-screen">
         {/* Left Panel with Controls */}
-        
         <div className="w-1/3 bg-gray-800 p-6 flex flex-col gap-6 text-white">
           {/* Navigation Bar */}
+          <div className="nav bg-pink-400 p-2 text-white rounded-3xl">
+            <h1 className="text-2xl">StoryGen</h1>
+          </div>
 
           {/* Dropdown Filters */}
           <Dropdown
@@ -68,8 +173,9 @@ function App() {
           <button
             onClick={generateStory}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            disabled={isLoading}
           >
-            Generate Story
+            {isLoading ? "Generating..." : "Generate Story"}
           </button>
         </div>
 
@@ -77,7 +183,7 @@ function App() {
         <div className="w-2/3 relative">
           {/* Video Background */}
           <video
-            className="w-full h-full object-cover opacity-90" // Reduced opacity instead of blur
+            className="w-full h-full object-cover opacity-90"
             autoPlay
             loop
             muted
@@ -100,28 +206,28 @@ function App() {
               ) : (
                 <p className="text-gray-300">Your story will appear here...</p>
               )}
+              {error && <p className="text-red-500 mt-2">{error}</p>}
             </div>
 
             {/* What Next Options */}
-            {storyText && (
-              <div className="flex justify-around mt-4">
+            {plotOptions.length > 0 && (
+              <div className="flex flex-wrap justify-around mt-4 gap-2">
+                {plotOptions.map((plot, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handlePlotOptionSelect(plot)}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600"
+                    disabled={isLoading}
+                  >
+                    Option {index + 1}: {plot.slice(0, 20)}...
+                  </button>
+                ))}
                 <button
-                  onClick={() => handleNextOption("The hero escapes")}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                  onClick={reloadPlots}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                  disabled={isLoading}
                 >
-                  Option 1: Escape
-                </button>
-                <button
-                  onClick={() => handleNextOption("The villain strikes")}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                >
-                  Option 2: Confrontation
-                </button>
-                <button
-                  onClick={() => handleNextOption("A twist unfolds")}
-                  className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600"
-                >
-                  Option 3: Twist
+                  {isLoading ? "Reloading..." : "Reload Plots"}
                 </button>
               </div>
             )}
