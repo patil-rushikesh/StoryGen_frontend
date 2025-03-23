@@ -35,7 +35,6 @@ StoryGen Frontend is the client-side interface for the **StoryGen** project, all
 - **Vite** - Lightning-fast build tool for frontend projects
 - **ESLint** - Ensures code quality and consistency
 - **Tailwind CSS** - Utility-first CSS framework
-- **GSAP** - Animation library
 
 ---
 
@@ -55,7 +54,6 @@ StoryGen Frontend is the client-side interface for the **StoryGen** project, all
 ```
 📌 **Description:**
 - `@tailwindcss/vite`: Enables Tailwind CSS with Vite for fast styling.
-- `gsap`: A powerful animation library for UI elements.
 - `react` & `react-dom`: Core dependencies for building React applications.
 - `tailwindcss`: A utility-first CSS framework for responsive design.
 
@@ -79,7 +77,6 @@ StoryGen Frontend is the client-side interface for the **StoryGen** project, all
 - `@eslint/js`: JavaScript linting configurations.
 - `@types/react` & `@types/react-dom`: TypeScript definitions for React.
 - `@vitejs/plugin-react`: React plugin for Vite.
-- `eslint` & related plugins: Ensures code quality and best practices.
 - `globals`: Provides predefined global variables.
 - `vite`: Development server and build tool for modern frontend projects.
 
@@ -122,40 +119,6 @@ createRoot(document.getElementById('root')).render(
 );
 ```
 
----
-
-## Fixes & Improvements
-
-### **Issue: Importing Video File Incorrectly**
-
-#### Fix:
-The following import in `App.jsx` is unnecessary:
-```javascript
-import "./../public/horror.mp4";
-```
-Instead, reference the video file directly in the `<video>` tag:
-```jsx
-<source src="/horror.mp4" type="video/mp4" />
-```
-
-### **Dropdown Default Selection Handling**
-
-#### Fix:
-Replace the `selected` attribute in `<option>` with `value` in the `<select>` tag:
-```jsx
-<select
-  className="border border-gray-300 p-2 rounded-md"
-  value={selectedOption}
-  onChange={(e) => setSelectedOption(e.target.value)}
->
-  <option value="" disabled>Select an option</option>
-```
-
-### **Consider Backend API Integration**
-- The current `generateStory` function is a placeholder.
-- Future improvements should replace it with an API call to the backend for dynamic story generation.
-
----
 
 ## How to Run the Project
 
