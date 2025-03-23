@@ -1,7 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-import "./../public/scifi.mp4";
-import "./../public/classic.mp4";
+import "./../public/horror.mp4";
 
 function App() {
   const [prompt, setPrompt] = useState("");
